@@ -1,0 +1,830 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Discord Bot Dashboard API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Discord OAuth2 authentication
+  - name: guilds
+    description: Discord guild (server) operations
+  - name: config
+    description: Guild configuration
+  - name: embeds
+    description: Embed designs
+  - name: logs
+    description: Activity logs
+  - name: stats
+    description: Dashboard statistics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/discord:
+    get:
+      operationId: initiateDiscordAuth
+      tags: [auth]
+      summary: Initiate Discord OAuth2 flow
+      responses:
+        "302":
+          description: Redirects to Discord
+
+  /auth/discord/callback:
+    get:
+      operationId: discordAuthCallback
+      tags: [auth]
+      summary: Discord OAuth2 callback
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirects to dashboard
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscordUser"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /guilds:
+    get:
+      operationId: getGuilds
+      tags: [guilds]
+      summary: Get guilds the user manages
+      responses:
+        "200":
+          description: List of guilds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Guild"
+        "401":
+          description: Unauthorized
+
+  /guilds/{guildId}:
+    get:
+      operationId: getGuild
+      tags: [guilds]
+      summary: Get a specific guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "404":
+          description: Not found
+
+  /guilds/{guildId}/channels:
+    get:
+      operationId: getGuildChannels
+      tags: [guilds]
+      summary: Get guild channels
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Channel"
+
+  /guilds/{guildId}/roles:
+    get:
+      operationId: getGuildRoles
+      tags: [guilds]
+      summary: Get guild roles
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+
+  /guilds/{guildId}/config:
+    get:
+      operationId: getGuildConfig
+      tags: [config]
+      summary: Get guild configuration
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildConfig"
+        "404":
+          description: Not found
+    put:
+      operationId: updateGuildConfig
+      tags: [config]
+      summary: Update guild configuration
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGuildConfigBody"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildConfig"
+
+  /guilds/{guildId}/embeds:
+    get:
+      operationId: getEmbeds
+      tags: [embeds]
+      summary: List embeds for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of embeds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmbedDesign"
+    post:
+      operationId: createEmbed
+      tags: [embeds]
+      summary: Create a new embed design
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmbedBody"
+      responses:
+        "201":
+          description: Created embed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbedDesign"
+
+  /guilds/{guildId}/embeds/{embedId}:
+    get:
+      operationId: getEmbed
+      tags: [embeds]
+      summary: Get a specific embed
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: embedId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Embed design
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbedDesign"
+    put:
+      operationId: updateEmbed
+      tags: [embeds]
+      summary: Update an embed design
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: embedId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmbedBody"
+      responses:
+        "200":
+          description: Updated embed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbedDesign"
+    delete:
+      operationId: deleteEmbed
+      tags: [embeds]
+      summary: Delete an embed design
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: embedId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /guilds/{guildId}/embeds/{embedId}/send:
+    post:
+      operationId: sendEmbed
+      tags: [embeds]
+      summary: Send an embed to a channel via the bot
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: embedId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendEmbedBody"
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /guilds/{guildId}/logs:
+    get:
+      operationId: getGuildLogs
+      tags: [logs]
+      summary: Get recent activity logs for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
+  /guilds/{guildId}/stats:
+    get:
+      operationId: getGuildStats
+      tags: [stats]
+      summary: Get dashboard stats for a guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildStats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    DiscordUser:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        discriminator:
+          type: string
+        avatar:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+      required:
+        - id
+        - username
+        - discriminator
+
+    Guild:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        icon:
+          type: ["string", "null"]
+        botPresent:
+          type: boolean
+        memberCount:
+          type: ["integer", "null"]
+      required:
+        - id
+        - name
+        - botPresent
+
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: integer
+      required:
+        - id
+        - name
+        - type
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: integer
+        position:
+          type: integer
+      required:
+        - id
+        - name
+        - color
+        - position
+
+    EmbedField:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        inline:
+          type: boolean
+      required:
+        - name
+        - value
+
+    EmbedDesign:
+      type: object
+      properties:
+        id:
+          type: string
+        guildId:
+          type: string
+        name:
+          type: string
+        title:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        footerText:
+          type: ["string", "null"]
+        footerIconUrl:
+          type: ["string", "null"]
+        authorName:
+          type: ["string", "null"]
+        authorIconUrl:
+          type: ["string", "null"]
+        authorUrl:
+          type: ["string", "null"]
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmbedField"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - guildId
+        - name
+        - fields
+        - createdAt
+        - updatedAt
+
+    CreateEmbedBody:
+      type: object
+      properties:
+        name:
+          type: string
+        title:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        footerText:
+          type: ["string", "null"]
+        footerIconUrl:
+          type: ["string", "null"]
+        authorName:
+          type: ["string", "null"]
+        authorIconUrl:
+          type: ["string", "null"]
+        authorUrl:
+          type: ["string", "null"]
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmbedField"
+      required:
+        - name
+
+    SendEmbedBody:
+      type: object
+      properties:
+        channelId:
+          type: string
+      required:
+        - channelId
+
+    WelcomeConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        channelId:
+          type: ["string", "null"]
+        message:
+          type: ["string", "null"]
+        embedId:
+          type: ["string", "null"]
+      required:
+        - enabled
+
+    GoodbyeConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        channelId:
+          type: ["string", "null"]
+        message:
+          type: ["string", "null"]
+        embedId:
+          type: ["string", "null"]
+      required:
+        - enabled
+
+    ModerationConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        logChannelId:
+          type: ["string", "null"]
+        muteRoleId:
+          type: ["string", "null"]
+      required:
+        - enabled
+
+    LoggingConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        channelId:
+          type: ["string", "null"]
+        logJoins:
+          type: boolean
+        logLeaves:
+          type: boolean
+        logMessageDeletes:
+          type: boolean
+        logMessageEdits:
+          type: boolean
+        logModActions:
+          type: boolean
+      required:
+        - enabled
+        - logJoins
+        - logLeaves
+        - logMessageDeletes
+        - logMessageEdits
+        - logModActions
+
+    AutoRoleConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        roleIds:
+          type: array
+          items:
+            type: string
+      required:
+        - enabled
+        - roleIds
+
+    AntiSpamConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        maxMessages:
+          type: integer
+        timeWindowSeconds:
+          type: integer
+        action:
+          type: string
+      required:
+        - enabled
+        - maxMessages
+        - timeWindowSeconds
+        - action
+
+    ReactionRoleItem:
+      type: object
+      properties:
+        emoji:
+          type: string
+        roleId:
+          type: string
+      required:
+        - emoji
+        - roleId
+
+    ReactionRolesConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReactionRoleItem"
+      required:
+        - enabled
+        - items
+
+    GuildConfig:
+      type: object
+      properties:
+        guildId:
+          type: string
+        prefix:
+          type: string
+        welcome:
+          $ref: "#/components/schemas/WelcomeConfig"
+        goodbye:
+          $ref: "#/components/schemas/GoodbyeConfig"
+        moderation:
+          $ref: "#/components/schemas/ModerationConfig"
+        logging:
+          $ref: "#/components/schemas/LoggingConfig"
+        autoRole:
+          $ref: "#/components/schemas/AutoRoleConfig"
+        antiSpam:
+          $ref: "#/components/schemas/AntiSpamConfig"
+        reactionRoles:
+          $ref: "#/components/schemas/ReactionRolesConfig"
+        updatedAt:
+          type: string
+      required:
+        - guildId
+        - prefix
+        - welcome
+        - goodbye
+        - moderation
+        - logging
+        - autoRole
+        - antiSpam
+        - reactionRoles
+
+    UpdateGuildConfigBody:
+      type: object
+      properties:
+        prefix:
+          type: string
+        welcome:
+          $ref: "#/components/schemas/WelcomeConfig"
+        goodbye:
+          $ref: "#/components/schemas/GoodbyeConfig"
+        moderation:
+          $ref: "#/components/schemas/ModerationConfig"
+        logging:
+          $ref: "#/components/schemas/LoggingConfig"
+        autoRole:
+          $ref: "#/components/schemas/AutoRoleConfig"
+        antiSpam:
+          $ref: "#/components/schemas/AntiSpamConfig"
+        reactionRoles:
+          $ref: "#/components/schemas/ReactionRolesConfig"
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+        guildId:
+          type: string
+        type:
+          type: string
+        userId:
+          type: ["string", "null"]
+        targetId:
+          type: ["string", "null"]
+        details:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - guildId
+        - type
+        - details
+        - createdAt
+
+    GuildStats:
+      type: object
+      properties:
+        guildId:
+          type: string
+        totalMembers:
+          type: integer
+        totalEmbeds:
+          type: integer
+        totalModActions:
+          type: integer
+        totalJoinsToday:
+          type: integer
+        totalLeavesToday:
+          type: integer
+        recentLogs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+      required:
+        - guildId
+        - totalMembers
+        - totalEmbeds
+        - totalModActions
+        - totalJoinsToday
+        - totalLeavesToday
+        - recentLogs
